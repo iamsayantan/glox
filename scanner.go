@@ -126,6 +126,8 @@ func (sc *Scanner) scanToken() {
 	default:
 		if sc.isDigit(c) {
 			sc.scanNumber()
+		} else if sc.isAlpha(c) {
+			sc.scanIdentifier()
 		} else {
 			sc.runtime.Error(sc.line, fmt.Sprintf("Unexpected character %c", c))
 		}
