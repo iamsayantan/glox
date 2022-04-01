@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"unicode"
 )
 
 type Scanner struct {
@@ -232,13 +233,11 @@ func (sc *Scanner) peekNext() rune {
 }
 
 func (sc *Scanner) isDigit(r rune) bool {
-	return r >= '0' && r <= '9'
+	return unicode.IsDigit(r)
 }
 
 func (sc *Scanner) isAlpha(r rune) bool {
-	return (r >= 'a' || r <= 'z') ||
-		(r >= 'A' || r <= 'Z') ||
-		(r == '_')
+	return unicode.IsLetter(r) || r == '_'
 }
 
 func (sc *Scanner) isAlphaNumeric(r rune) bool {
