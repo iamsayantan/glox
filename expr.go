@@ -1,14 +1,14 @@
 package glox
 
+type Expr interface {
+	Accept(visitor Visitor) interface{}
+}
+
 type Visitor interface {
 	VisitBinaryExpr(expr *Binary) interface{}
 	VisitGroupingExpr(expr *Grouping) interface{}
 	VisitLiteralExpr(expr *Literal) interface{}
 	VisitUnaryExpr(expr *Unary) interface{}
-}
-
-type Expr interface {
-	Accept(visitor Visitor) interface{}
 }
 
 type Binary struct {
