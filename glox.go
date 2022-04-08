@@ -80,3 +80,11 @@ func (r *Runtime) report(line int, where string, message string) {
 	r.hadError = true
 	fmt.Println(errMessage)
 }
+
+func (r *Runtime) tokenError(token Token, message string) {
+	if token.Type == Eof {
+		r.report(token.Line, " at end ", message)
+	} else {
+		r.report(token.Line, " at '" + token.Lexeme + "'", message)
+	}
+}
