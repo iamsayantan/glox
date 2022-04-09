@@ -66,7 +66,17 @@ func (r *Runtime) Error(line int, message string) {
 
 func (r *Runtime) run(source string) {
 	scanner := NewScanner(bytes.NewBuffer([]byte(source)), r)
-	_ = scanner.ScanTokens()
+	tokens := scanner.ScanTokens()
+
+	parser := NewParser(tokens, r)
+	expr := parser.Parse()
+
+	printer := &AstPrinter{}
+	if r.hadError {
+		return
+	}
+	
+	fmt.Println(printer.Print(expr))
 
 	// for _, token := range tokens {
 	// 	if token.Type == String {

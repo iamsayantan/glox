@@ -7,19 +7,8 @@ import (
 
 type AstPrinter struct{}
 
-func (ap *AstPrinter) Print() string {
-	exp := &Binary{
-		Left: &Unary{
-			Operator: NewToken(Minus, "-", nil, 1),
-			Right:    &Literal{Value: 123},
-		},
-		Operator: NewToken(Star, "*", nil, 1),
-		Right: &Grouping{
-			Expression: &Literal{Value: 45.67},
-		},
-	}
-	
-	return exp.Accept(ap).(string)
+func (ap *AstPrinter) Print(expr Expr) string {
+	return expr.Accept(ap).(string)
 }
 
 func (ap *AstPrinter) VisitBinaryExpr(expr *Binary) interface{} {

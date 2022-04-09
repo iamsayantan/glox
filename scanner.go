@@ -93,7 +93,7 @@ func (sc *Scanner) scanToken() {
 		if sc.match('=') {
 			sc.addToken(BangEqual, nil)
 		} else {
-			sc.addToken(Equal, nil)
+			sc.addToken(Bang, nil)
 		}
 	case '=':
 		if sc.match('=') {

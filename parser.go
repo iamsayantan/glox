@@ -245,7 +245,7 @@ func (p *Parser) consume(tokenType TokenType, message string) (Token, error) {
 		return p.advance(), nil
 	}
 
-	return Token{}, NewParseError(message)
+	return Token{}, p.error(p.peek(), message)
 }
 
 // isAtEnd checks if we have run out of tokens to parse.
