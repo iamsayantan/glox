@@ -7,14 +7,20 @@ import (
 	"os"
 )
 
+var interpreter *Interpreter
+
 type Runtime struct {
-	hadError bool
+	hadError        bool
+	hadRuntimeError bool
 }
 
 func NewRuntime() *Runtime {
-	return &Runtime{
+	r := &Runtime{
 		hadError: false,
 	}
+
+	interpreter = NewInterpreter(r)
+	return r
 }
 
 func (r *Runtime) Run(args []string) {
@@ -39,6 +45,10 @@ func (r *Runtime) RunFile(path string) {
 
 	if r.hadError {
 		os.Exit(65)
+	}
+
+	if r.hadRuntimeError {
+		os.Exit(70)
 	}
 }
 
@@ -71,18 +81,11 @@ func (r *Runtime) run(source string) {
 	parser := NewParser(tokens, r)
 	expr := parser.Parse()
 
-	printer := &AstPrinter{}
 	if r.hadError {
 		return
 	}
-	
-	fmt.Println(printer.Print(expr))
 
-	// for _, token := range tokens {
-	// 	if token.Type == String {
-	// 		fmt.Println(token.ToString())
-	// 	}
-	// }
+	interpreter.Interpret(expr)
 }
 
 func (r *Runtime) report(line int, where string, message string) {
@@ -91,10 +94,16 @@ func (r *Runtime) report(line int, where string, message string) {
 	fmt.Println(errMessage)
 }
 
+func (r *Runtime) runtimeError(err error) {
+	runErr := err.(*RuntimeError)
+	fmt.Printf("%s \n[line %d ]\n", runErr.Error(), runErr.token.Line)
+	r.hadRuntimeError = true
+}
+
 func (r *Runtime) tokenError(token Token, message string) {
 	if token.Type == Eof {
 		r.report(token.Line, " at end ", message)
 	} else {
-		r.report(token.Line, " at '" + token.Lexeme + "'", message)
+		r.report(token.Line, " at '"+token.Lexeme+"'", message)
 	}
 }

@@ -7,28 +7,33 @@ import (
 
 type AstPrinter struct{}
 
-func (ap *AstPrinter) Print(expr Expr) string {
-	return expr.Accept(ap).(string)
-}
-
-func (ap *AstPrinter) VisitBinaryExpr(expr *Binary) interface{} {
-	return ap.parenthesize(expr.Operator.Lexeme, expr.Left, expr.Right)
-}
-
-func (ap *AstPrinter) VisitGroupingExpr(expr *Grouping) interface{} {
-	return ap.parenthesize("group", expr.Expression)
-}
-
-func (ap *AstPrinter) VisitLiteralExpr(expr *Literal) interface{} {
-	if expr.Value == nil {
-		return "nil"
+func (ap *AstPrinter) Print(expr Expr) (string, error) {
+	val, err := expr.Accept(ap)
+	if err != nil {
+		return "", err
 	}
 
-	return fmt.Sprintf("%v", expr.Value)
+	return val.(string), nil
 }
 
-func (ap *AstPrinter) VisitUnaryExpr(expr *Unary) interface{} {
-	return ap.parenthesize(expr.Operator.Lexeme, expr.Right)
+func (ap *AstPrinter) VisitBinaryExpr(expr *Binary) (interface{}, error) {
+	return ap.parenthesize(expr.Operator.Lexeme, expr.Left, expr.Right), nil
+}
+
+func (ap *AstPrinter) VisitGroupingExpr(expr *Grouping) (interface{}, error) {
+	return ap.parenthesize("group", expr.Expression), nil
+}
+
+func (ap *AstPrinter) VisitLiteralExpr(expr *Literal) (interface{}, error) {
+	if expr.Value == nil {
+		return "nil", nil
+	}
+
+	return fmt.Sprintf("%v", expr.Value), nil
+}
+
+func (ap *AstPrinter) VisitUnaryExpr(expr *Unary) (interface{}, error) {
+	return ap.parenthesize(expr.Operator.Lexeme, expr.Right), nil
 }
 
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
@@ -37,7 +42,8 @@ func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 
 	for _, expr := range exprs {
 		s.WriteString(" ")
-		s.WriteString(expr.Accept(ap).(string))
+		val,_ := expr.Accept(ap)
+		s.WriteString(val.(string))
 	}
 
 	s.WriteString(")")

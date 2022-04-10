@@ -22,6 +22,6 @@ func main() {
 	}
 
 	ap := glox.AstPrinter{}
-	ast := ap.Print()
+	ast, _ := ap.Print()
 	fmt.Println(ast)
 }
