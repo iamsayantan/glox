@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/iamsayantan/glox"
 	"github.com/iamsayantan/glox/tools"
 )
 
@@ -20,8 +19,4 @@ func main() {
 
 		fmt.Println("Error generating AST: ", err.Error())
 	}
-
-	ap := glox.AstPrinter{}
-	ast, _ := ap.Print()
-	fmt.Println(ast)
 }

@@ -45,7 +45,7 @@ func defineAst(outputDir, baseName string, astTypes []string) error {
 
 	w.WriteString("package glox\n\n")
 	w.WriteString("type " + baseName + " interface {\n")
-	w.WriteString("    Accept(visitor Visitor) interface{}\n")
+	w.WriteString("    Accept(visitor Visitor) (interface{}, error)\n")
 	w.WriteString("}\n\n")
 
 	defineVisitor(w, baseName, astTypes)
@@ -72,7 +72,7 @@ func defineVisitor(w *bufio.Writer, baseName string, astTypes []string) {
 			strings.Split(astType, ":")[0],
 			" ",
 		)
-		w.WriteString(fmt.Sprintf("    Visit%sExpr(expr *%s) interface{}\n", typeName, typeName))
+		w.WriteString(fmt.Sprintf("    Visit%sExpr(expr *%s) (interface{}, error)\n", typeName, typeName))
 	}
 
 	w.WriteString("}\n\n")
@@ -91,7 +91,7 @@ func defineType(w *bufio.Writer, baseName, typeName, fieldList string) {
 	// define the Accept method so it implements the base interface
 	typeAsParam := strings.ToLower(string([]rune(typeName)[0])) // the first character from the type will be used as receiver parameter
 
-	w.WriteString(fmt.Sprintf("func (%s *%s) Accept(visitor Visitor) interface{} {\n", typeAsParam, typeName))
+	w.WriteString(fmt.Sprintf("func (%s *%s) Accept(visitor Visitor) (interface{}, error) {\n", typeAsParam, typeName))
 	w.WriteString(fmt.Sprintf("    return visitor.Visit%sExpr(%s)\n", typeName, typeAsParam))
 	w.WriteString("}\n\n")
 }
