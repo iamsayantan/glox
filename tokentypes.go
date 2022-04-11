@@ -41,7 +41,7 @@ const (
 	If
 	Nil
 	Or
-	Print
+	PRINT // conflicting with the Print{} stmt and I am too lazy to rename everything else for it.
 	Return
 	Super
 	This
