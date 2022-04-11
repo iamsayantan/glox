@@ -29,13 +29,61 @@ func NewParser(tokens []Token, runtime *Runtime) *Parser {
 	}
 }
 
-func (p *Parser) Parse() Expr {
-	expr, err := p.expression()
-	if err != nil {
-		return nil
+func (p *Parser) Parse() []Stmt {
+	statements := make([]Stmt, 0)
+	for !p.isAtEnd() {
+		expr, err := p.statement()
+		if err != nil {
+			return nil
+		}
+
+		statements = append(statements,expr)
 	}
 
-	return expr
+	return statements
+}
+
+func (p *Parser) statement() (Stmt, error) {
+	if p.match(PRINT) {
+		return p.printStatement()
+	}
+
+	return p.expressionStatement()
+}
+
+// printStatement parses a print statement. Since the print keyword is 
+// already consumed by the match method earlier, we just parse the 
+// subsequent expression, consume the terminating semicolon and emit the
+// syntax tree.
+func (p *Parser) printStatement() (Stmt, error) {
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(Semicolon, "Expect ; after value.")
+	if err != nil {
+		return nil, err
+	}
+
+	return &Print{Expression: expr}, nil
+}
+
+// expressionStatement parses expression statements. It kind of acts like a 
+// fallthrough condition. If we can't match with any known statements, we 
+// assume it's a expression statement.
+func (p *Parser) expressionStatement() (Stmt, error) {
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(Semicolon, "Expect ; after value.")
+	if err != nil {
+		return nil, err
+	}
+
+	return &Expression{Expression: expr}, nil
 }
 
 // expression parses the grammar
@@ -282,7 +330,7 @@ func (p *Parser) synchronize() {
 		}
 
 		switch p.peek().Type {
-		case Class, Fun, Var, For, If, While, Print, Return:
+		case Class, Fun, Var, For, If, While, PRINT, Return:
 			return
 		}
 

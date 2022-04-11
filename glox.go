@@ -79,13 +79,13 @@ func (r *Runtime) run(source string) {
 	tokens := scanner.ScanTokens()
 
 	parser := NewParser(tokens, r)
-	expr := parser.Parse()
+	statements := parser.Parse()
 
 	if r.hadError {
 		return
 	}
 
-	interpreter.Interpret(expr)
+	interpreter.Interpret(statements)
 }
 
 func (r *Runtime) report(line int, where string, message string) {

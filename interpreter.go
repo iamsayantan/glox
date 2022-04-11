@@ -27,15 +27,46 @@ func NewRuntimeError(token Token, message string) error {
 	return &RuntimeError{token: token, message: message}
 }
 
-func (i *Interpreter) Interpret(expr Expr) {
-	val, err := i.evaluate(expr)
-	if err != nil {
+func (i *Interpreter) Interpret(statements []Stmt) {
+	for _, stmt := range statements {
+		err := i.execute(stmt)
+		if err != nil {
 
-		i.runtime.runtimeError(err)
-		return
+			i.runtime.runtimeError(err)
+			return
+		}
+	}
+}
+
+func (i *Interpreter) execute(stmt Stmt) error {
+	err := stmt.Accept(i)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// VisitExpressionExpr interprets expression statements. As statements do not
+// produce any value, we are discarding the expression generated from evaluating
+// the statement's expression.
+func (i *Interpreter) VisitExpressionExpr(expr *Expression) error {
+	_, err := i.evaluate(expr.Expression)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *Interpreter) VisitPrintExpr(expr *Print) error {
+	val, err := i.evaluate(expr.Expression)
+	if err != nil {
+		return err
 	}
 
 	fmt.Println(i.stringify(val))
+	return nil
 }
 
 func (i *Interpreter) stringify(val interface{}) string {
@@ -47,7 +78,7 @@ func (i *Interpreter) stringify(val interface{}) string {
 		return fmt.Sprintf("%d", int(val.(float64)))
 	}
 
-	return fmt.Sprintf("%v", val)
+	return fmt.Sprint(val)
 }
 
 func (i *Interpreter) VisitBinaryExpr(expr *Binary) (interface{}, error) {

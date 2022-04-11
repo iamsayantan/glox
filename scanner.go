@@ -154,6 +154,7 @@ func (sc *Scanner) scanString() {
 
 	// Trim the surrounding quotes and just take the string literal.
 	val := sc.sourceRunes[sc.start+1 : sc.current-1]
+
 	sc.addToken(String, val)
 }
 
