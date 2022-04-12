@@ -7,11 +7,12 @@ import (
 )
 
 type Interpreter struct {
-	runtime *Runtime
+	runtime     *Runtime
+	environment *Environment
 }
 
 func NewInterpreter(runtime *Runtime) *Interpreter {
-	return &Interpreter{runtime: runtime}
+	return &Interpreter{runtime: runtime, environment: NewEnvironment()}
 }
 
 type RuntimeError struct {
@@ -45,6 +46,34 @@ func (i *Interpreter) execute(stmt Stmt) error {
 	}
 
 	return nil
+}
+
+// VisitVarStmt interprets an variable declaration. If the variable has an 
+// initialization part, we first evaluate it, otherwise we store the default
+// nil value for it. Thus it allows us to define an uninitialized variable.
+// Like other dynamically typed languages, we just assign nil if the variable
+// is not initialized.
+func (i *Interpreter) VisitVarStmt(expr *VarStmt) error {
+	var val interface{}
+	var err error
+	if expr.Initializer != nil {
+		val, err = i.evaluate(expr.Initializer)
+		if err != nil {
+			return err
+		}
+	}
+
+	i.environment.Define(expr.Name.Lexeme, val)
+	return nil
+}
+
+func (i *Interpreter) VisitVarExpr(expr *VarExpr) (interface{}, error) {
+	val, err := i.environment.Get(expr.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return val, nil
 }
 
 // VisitExpressionExpr interprets expression statements. As statements do not

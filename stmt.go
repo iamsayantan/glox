@@ -12,7 +12,7 @@ type Stmt interface {
 type StmtVisitor interface {
 	VisitExpressionExpr(expr *Expression) error
 	VisitPrintExpr(expr *Print) error
-	VisitVariableExpr(expr *VarStmt) error
+	VisitVarStmt(expr *VarStmt) error
 }
 
 type Expression struct {
@@ -37,5 +37,5 @@ type VarStmt struct {
 }
 
 func (v *VarStmt) Accept(visitor StmtVisitor) error {
-	return visitor.VisitVariableExpr(v)
+	return visitor.VisitVarStmt(v)
 }
