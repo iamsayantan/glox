@@ -43,6 +43,10 @@ func (p *Parser) Parse() []Stmt {
 	return statements
 }
 
+// statement parses statements, a program can have multiple statements. Statements are
+// of two types, print statement and expression statement.
+// statement --> exprStmt
+//				| printStmt
 func (p *Parser) statement() (Stmt, error) {
 	if p.match(PRINT) {
 		return p.printStatement()
@@ -55,6 +59,7 @@ func (p *Parser) statement() (Stmt, error) {
 // already consumed by the match method earlier, we just parse the
 // subsequent expression, consume the terminating semicolon and emit the
 // syntax tree.
+// printStmt --> "print" expression ";"
 func (p *Parser) printStatement() (Stmt, error) {
 	expr, err := p.expression()
 	if err != nil {
@@ -72,6 +77,7 @@ func (p *Parser) printStatement() (Stmt, error) {
 // expressionStatement parses expression statements. It kind of acts like a
 // fallthrough condition. If we can't match with any known statements, we
 // assume it's a expression statement.
+// exprStmt --> expression ";";
 func (p *Parser) expressionStatement() (Stmt, error) {
 	expr, err := p.expression()
 	if err != nil {
