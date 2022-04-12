@@ -37,7 +37,7 @@ func (p *Parser) Parse() []Stmt {
 			return nil
 		}
 
-		statements = append(statements,expr)
+		statements = append(statements, expr)
 	}
 
 	return statements
@@ -51,8 +51,8 @@ func (p *Parser) statement() (Stmt, error) {
 	return p.expressionStatement()
 }
 
-// printStatement parses a print statement. Since the print keyword is 
-// already consumed by the match method earlier, we just parse the 
+// printStatement parses a print statement. Since the print keyword is
+// already consumed by the match method earlier, we just parse the
 // subsequent expression, consume the terminating semicolon and emit the
 // syntax tree.
 func (p *Parser) printStatement() (Stmt, error) {
@@ -69,8 +69,8 @@ func (p *Parser) printStatement() (Stmt, error) {
 	return &Print{Expression: expr}, nil
 }
 
-// expressionStatement parses expression statements. It kind of acts like a 
-// fallthrough condition. If we can't match with any known statements, we 
+// expressionStatement parses expression statements. It kind of acts like a
+// fallthrough condition. If we can't match with any known statements, we
 // assume it's a expression statement.
 func (p *Parser) expressionStatement() (Stmt, error) {
 	expr, err := p.expression()
