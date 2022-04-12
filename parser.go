@@ -32,7 +32,7 @@ func NewParser(tokens []Token, runtime *Runtime) *Parser {
 func (p *Parser) Parse() []Stmt {
 	statements := make([]Stmt, 0)
 	for !p.isAtEnd() {
-		expr, err := p.statement()
+		expr, err := p.declaration()
 		if err != nil {
 			return nil
 		}
@@ -41,6 +41,49 @@ func (p *Parser) Parse() []Stmt {
 	}
 
 	return statements
+}
+
+// declaration parses declaration statements. Any place where a declaration is allowed also
+// allowes non declaring statements, so the declaration rule falls through the statement.
+// declaration is called repeatedly when parsing a series of statements. If we get any error
+// while parsing, the parser tries to recover using synchronize and continue parsing the next
+// statements.
+// declaration --> varDecl
+// 				   | statement
+func (p *Parser) declaration() (Stmt, error) {
+	if p.match(Var) {
+		stmt, err := p.varDeclaration()
+		if err != nil {
+			p.synchronize()
+			return nil, nil
+		}
+
+		return stmt, nil
+	}
+
+	return p.statement()
+}
+
+// varDeclaration parses variable declaration syntax. When the parser matches a var
+// keyword, this method is used to parse that statement.
+// varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+func (p *Parser) varDeclaration() (Stmt, error) {
+	name, err := p.consume(Identifiers, "Expect a variable name")
+	if err != nil {
+		return nil, err
+	}
+
+	var expr Expr
+	if p.match(Equal) {
+		expr, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = p.consume(Semicolon, "Expect a ';' after variable declaration")
+
+	return &VarStmt{Name: name, Initializer: expr}, nil
 }
 
 // statement parses statements, a program can have multiple statements. Statements are
@@ -219,6 +262,7 @@ func (p *Parser) unary() (Expr, error) {
 // primary parses the primary expressions, these are of highest level of precedence.
 // primary --> NUMBER | STRING | "true" | "false" | "nil"
 //            | "(" expression ")"
+//            | IDENTIFIER;
 func (p *Parser) primary() (Expr, error) {
 	if p.match(False) {
 		return &Literal{Value: false}, nil
@@ -234,6 +278,10 @@ func (p *Parser) primary() (Expr, error) {
 
 	if p.match(String, Number) {
 		return &Literal{Value: p.previous().Literal}, nil
+	}
+
+	if p.match(Identifiers) {
+		return &VarExpr{Name: p.previous()}, nil
 	}
 
 	// if we find a '(' token during parsing, we must find a ')' too

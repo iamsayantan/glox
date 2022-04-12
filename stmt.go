@@ -12,6 +12,7 @@ type Stmt interface {
 type StmtVisitor interface {
 	VisitExpressionExpr(expr *Expression) error
 	VisitPrintExpr(expr *Print) error
+	VisitVariableExpr(expr *VarStmt) error
 }
 
 type Expression struct {
@@ -28,4 +29,13 @@ type Print struct {
 
 func (p *Print) Accept(visitor StmtVisitor) error {
 	return visitor.VisitPrintExpr(p)
+}
+
+type VarStmt struct {
+	Name        Token
+	Initializer Expr
+}
+
+func (v *VarStmt) Accept(visitor StmtVisitor) error {
+	return visitor.VisitVariableExpr(v)
 }
