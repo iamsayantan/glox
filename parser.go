@@ -95,7 +95,37 @@ func (p *Parser) statement() (Stmt, error) {
 		return p.printStatement()
 	}
 
+	if p.match(LeftBrace) {
+		stmt, err := p.block()
+		if err != nil {
+			return nil, err
+		}
+
+		return &Block{Statements: stmt}, nil
+	}
+
 	return p.expressionStatement()
+}
+
+// block parses a block of statements when it encounters a '{'.
+func (p *Parser) block() ([]Stmt, error) {
+	statements := make([]Stmt, 0)
+
+	for !p.check(RightBrace) && !p.isAtEnd() {
+		stmt, err := p.declaration()
+		if err != nil {
+			return nil, err
+		}
+
+		statements = append(statements, stmt)
+	}
+
+	_, err := p.consume(RightBrace, "Expect '}' after block")
+	if err != nil {
+		return nil, err
+	}
+
+	return statements, nil
 }
 
 // printStatement parses a print statement. Since the print keyword is

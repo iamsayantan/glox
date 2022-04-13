@@ -12,7 +12,7 @@ type Interpreter struct {
 }
 
 func NewInterpreter(runtime *Runtime) *Interpreter {
-	return &Interpreter{runtime: runtime, environment: NewEnvironment()}
+	return &Interpreter{runtime: runtime, environment: NewEnvironment(nil),}
 }
 
 type RuntimeError struct {
@@ -45,6 +45,26 @@ func (i *Interpreter) execute(stmt Stmt) error {
 		return err
 	}
 
+	return nil
+}
+
+func (i *Interpreter) VisitBlockStmt(stmt *Block) error {
+	return i.executeBlock(stmt.Statements, NewEnvironment(i.environment))
+}
+
+func (i *Interpreter) executeBlock(statements []Stmt, env *Environment) error {
+	previousEnv := i.environment
+
+	i.environment = env
+	for _, stmt := range statements {
+		err := i.execute(stmt)
+		if err != nil {
+			i.environment = previousEnv
+			return err
+		}
+	}
+
+	i.environment = previousEnv
 	return nil
 }
 
