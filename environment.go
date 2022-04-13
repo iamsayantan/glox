@@ -24,3 +24,13 @@ func (e *Environment) Get(name Token) (interface{}, error) {
 
 	return val, nil
 }
+
+func (e *Environment) Assign(name Token, value interface{}) error {
+	_, ok := e.values[name.Lexeme]
+	if !ok {
+		return NewRuntimeError(name, "Undefined variable '" + name.Lexeme + "'.")
+	}
+
+	e.values[name.Lexeme] = value
+	return nil
+}

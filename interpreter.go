@@ -48,7 +48,7 @@ func (i *Interpreter) execute(stmt Stmt) error {
 	return nil
 }
 
-// VisitVarStmt interprets an variable declaration. If the variable has an 
+// VisitVarStmt interprets an variable declaration. If the variable has an
 // initialization part, we first evaluate it, otherwise we store the default
 // nil value for it. Thus it allows us to define an uninitialized variable.
 // Like other dynamically typed languages, we just assign nil if the variable
@@ -69,6 +69,26 @@ func (i *Interpreter) VisitVarStmt(expr *VarStmt) error {
 
 func (i *Interpreter) VisitVarExpr(expr *VarExpr) (interface{}, error) {
 	val, err := i.environment.Get(expr.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return val, nil
+}
+
+// VisitAssignExpr evaluates the right hand side expression to get the value and then stores it in the
+// named variable. We use Assign method on the environment which only updates existing variable and is
+// not allowed to create new variable. This method returns the assigned value because assignment is an
+// expression and can be nested inside other expression.
+// var a = 1;
+// print a = 2; // "2"
+func (i *Interpreter) VisitAssignExpr(expr *Assign) (interface{}, error) {
+	val, err := i.evaluate(expr.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	err = i.environment.Assign(expr.Name, val)
 	if err != nil {
 		return nil, err
 	}

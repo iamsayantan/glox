@@ -5,11 +5,21 @@ type Expr interface {
 }
 
 type Visitor interface {
+	VisitAssignExpr(expr *Assign) (interface{}, error)
 	VisitBinaryExpr(expr *Binary) (interface{}, error)
 	VisitGroupingExpr(expr *Grouping) (interface{}, error)
 	VisitLiteralExpr(expr *Literal) (interface{}, error)
 	VisitUnaryExpr(expr *Unary) (interface{}, error)
 	VisitVarExpr(expr *VarExpr) (interface{}, error)
+}
+
+type Assign struct {
+	Name  Token
+	Value Expr
+}
+
+func (a *Assign) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitAssignExpr(a)
 }
 
 type Binary struct {

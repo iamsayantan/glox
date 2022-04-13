@@ -136,9 +136,43 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 }
 
 // expression parses the grammar
-// expression --> equality
+// expression --> assignment
 func (p *Parser) expression() (Expr, error) {
-	return p.equality()
+	return p.assignment()
+}
+
+// assignment parses an assignment expression. First we parse the left hand side, which can be
+// any expression of higher precedence. If we find an '=',  we parse the right hand side and
+// then wrap it all up in an assignment tree node. The difference from other binary expressions
+// is that we don't loop to build up a sequence of same operator. Since assignment is right associative
+// we call assignment() recursively to parse the right hand side.
+func (p *Parser) assignment() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(Equal) {
+		equals := p.previous()
+		value, err := p.assignment()
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Before we create a assignment node, we look at the left hand side expression and figure out
+		// what kind of assignment target it is. If the left hand side is not a valid assignment target
+		// we report a syntax error. This makes sure that we report an error on code like a + b = c.
+		if variable, ok := expr.(*VarExpr); ok {
+			name := variable.Name
+			return &Assign{Name: name, Value: value}, nil
+		} else {
+			p.error(equals, "Invalid assignment target")
+			return nil, nil
+		}
+	}
+
+	return expr, nil
 }
 
 // equality parses the grammar. It matches an equality and anything of higher precedence.
