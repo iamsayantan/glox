@@ -106,6 +106,10 @@ func (p *Parser) statement() (Stmt, error) {
 		return p.whileStatement()
 	}
 
+	if p.match(For) {
+		return p.forStatement()
+	}
+
 	if p.match(LeftBrace) {
 		stmt, err := p.block()
 		if err != nil {
@@ -116,6 +120,89 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 
 	return p.expressionStatement()
+}
+
+func (p *Parser) forStatement() (Stmt, error) {
+	_, err := p.consume(LeftParen, "Expect '(' after 'for'")
+	if err != nil {
+		return nil, err
+	}
+
+	var initializer Stmt = nil
+	var condition Expr = nil
+	var increment Expr = nil
+
+	// If the token following the '(' is a semicolon, then the initializer
+	// has been omitted. Otherwise we check for the var keyword to see if
+	// it's a variable declaration. If none of those is matched, it must be
+	// an expression.
+	if p.match(Semicolon) {
+		// no need to do anything, initializer already is nil
+	} else if p.match(Var) {
+		initializer, err = p.varDeclaration()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		initializer, err = p.expressionStatement()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !p.check(Semicolon) {
+		condition, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = p.consume(Semicolon, "Expect ';' after loop condition")
+	if err != nil {
+		return nil, err
+	}
+
+	if !p.check(RightParen) {
+		increment, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = p.consume(RightParen, "Expect ')' after for clause")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	// if increment is not nil, it executes after body in each iteration of the loop.
+	// And as the increment expression in the for loop does not produce any value, we
+	// convert it to an expression statement.
+	if increment != nil {
+		body = &Block{
+			Statements: []Stmt{body, &Expression{Expression: increment}},
+		}
+	}
+
+	// If the condition is omitted, we put in true to make it an infinite loop.
+	if condition == nil {
+		condition = &Literal{Value: True}
+	}
+
+	// Now we take the condition and body and make it a primitive while loop.
+	body = &WhileStmt{Condition: condition, Body: body}
+
+	// Now if we have an initializer, it runs once before the body of the loop. We do that
+	// by creating a block that runs the initializer and then executes the loop.
+	if initializer != nil {
+		body = &Block{Statements: []Stmt{initializer, body}}
+	}
+
+	return body, nil
 }
 
 func (p *Parser) whileStatement() (Stmt, error) {
