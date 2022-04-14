@@ -6,6 +6,7 @@ type Expr interface {
 
 type Visitor interface {
 	VisitAssignExpr(expr *Assign) (interface{}, error)
+	VisitLogicalExpr(expr *Logical) (interface{}, error)
 	VisitBinaryExpr(expr *Binary) (interface{}, error)
 	VisitGroupingExpr(expr *Grouping) (interface{}, error)
 	VisitLiteralExpr(expr *Literal) (interface{}, error)
@@ -20,6 +21,16 @@ type Assign struct {
 
 func (a *Assign) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitAssignExpr(a)
+}
+
+type Logical struct {
+	Left Expr
+	Operator Token
+	Right Expr
+}
+
+func (l *Logical) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitLogicalExpr(l)
 }
 
 type Binary struct {

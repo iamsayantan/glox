@@ -116,7 +116,7 @@ func (p *Parser) statement() (Stmt, error) {
 
 func (p *Parser) ifStatement() (Stmt, error) {
 	// The parenthesis around the if statement is only half useful. We need some kind of delimiter between
-	// the condition and the then statement, otherwise the parser can't tell when it has reached the end 
+	// the condition and the then statement, otherwise the parser can't tell when it has reached the end
 	// of the condition. But the opening parenthesis in the if condition doesn't do anything useful, it's
 	// only there because otherwise we'd end up with unbalanced parenthesis. Go requires the statement to
 	// be braced block, so the '{' acts as the end of the condition.
@@ -220,8 +220,10 @@ func (p *Parser) expression() (Expr, error) {
 // then wrap it all up in an assignment tree node. The difference from other binary expressions
 // is that we don't loop to build up a sequence of same operator. Since assignment is right associative
 // we call assignment() recursively to parse the right hand side.
+// assignment --> IDENTIFIER "=" assignment
+// 				  | logic_or
 func (p *Parser) assignment() (Expr, error) {
-	expr, err := p.equality()
+	expr, err := p.or()
 	if err != nil {
 		return nil, err
 	}
@@ -244,6 +246,44 @@ func (p *Parser) assignment() (Expr, error) {
 			p.error(equals, "Invalid assignment target")
 			return nil, nil
 		}
+	}
+
+	return expr, nil
+}
+
+func (p *Parser) or() (Expr, error) {
+	expr, err := p.and()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(Or) {
+		operator := p.previous()
+		right, err := p.and()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &Logical{Left: expr, Operator: operator, Right: right}
+	}
+
+	return expr, nil
+}
+
+func (p *Parser) and() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(And) {
+		operator := p.previous()
+		right, err := p.equality()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = &Logical{Left: expr, Operator: operator, Right: right}
 	}
 
 	return expr, nil

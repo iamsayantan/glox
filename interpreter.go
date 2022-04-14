@@ -12,7 +12,7 @@ type Interpreter struct {
 }
 
 func NewInterpreter(runtime *Runtime) *Interpreter {
-	return &Interpreter{runtime: runtime, environment: NewEnvironment(nil),}
+	return &Interpreter{runtime: runtime, environment: NewEnvironment(nil)}
 }
 
 type RuntimeError struct {
@@ -126,6 +126,29 @@ func (i *Interpreter) VisitExpressionExpr(expr *Expression) error {
 	}
 
 	return nil
+}
+
+// VisitLogicalExpr evaluates a logical expression. Here we evaluate the left operand first,
+// and we look at its value to check if we can short circuit. If not and only then we evaluate
+// the right operand.
+// Another interesting thing is we are returning the value with appropriate truthiness.
+func (i *Interpreter) VisitLogicalExpr(expr *Logical) (interface{}, error) {
+	left, err := i.evaluate(expr.Left)
+	if err != nil {
+		return nil, err
+	}
+
+	if expr.Operator.Type == Or {
+		if i.isTruthy(left) {
+			return left, nil
+		}
+	} else {
+		if !i.isTruthy(left) {
+			return left, nil
+		}
+	}
+
+	return i.evaluate(expr.Right)
 }
 
 func (i *Interpreter) VisitIfStmt(stmt *IfStmt) error {
