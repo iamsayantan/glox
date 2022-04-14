@@ -87,6 +87,26 @@ func (i *Interpreter) VisitVarStmt(expr *VarStmt) error {
 	return nil
 }
 
+func (i *Interpreter) VisitWhileStmt(stmt *WhileStmt) error {
+	for {
+		condition, err := i.evaluate(stmt.Condition)
+		if err != nil {
+			return err
+		}
+
+		if i.isTruthy(condition) {
+			err := i.execute(stmt.Body)
+			if err != nil {
+				return err
+			}
+		} else {
+			break
+		}
+	}
+
+	return nil
+}
+
 func (i *Interpreter) VisitVarExpr(expr *VarExpr) (interface{}, error) {
 	val, err := i.environment.Get(expr.Name)
 	if err != nil {

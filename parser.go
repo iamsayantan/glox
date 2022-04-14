@@ -102,6 +102,10 @@ func (p *Parser) statement() (Stmt, error) {
 		return p.printStatement()
 	}
 
+	if p.match(While) {
+		return p.whileStatement()
+	}
+
 	if p.match(LeftBrace) {
 		stmt, err := p.block()
 		if err != nil {
@@ -112,6 +116,30 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 
 	return p.expressionStatement()
+}
+
+func (p *Parser) whileStatement() (Stmt, error) {
+	_, err := p.consume(LeftParen, "Expect '(' after 'while'")
+	if err != nil {
+		return nil, err
+	}
+
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(RightParen, "Expect ')' after condition")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	return &WhileStmt{Condition: condition, Body: body}, nil
 }
 
 func (p *Parser) ifStatement() (Stmt, error) {
