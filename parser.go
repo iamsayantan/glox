@@ -82,6 +82,9 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 	}
 
 	_, err = p.consume(Semicolon, "Expect a ';' after variable declaration")
+	if err != nil {
+		return nil, err
+	}
 
 	return &VarStmt{Name: name, Initializer: expr}, nil
 }
