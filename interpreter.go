@@ -128,6 +128,27 @@ func (i *Interpreter) VisitExpressionExpr(expr *Expression) error {
 	return nil
 }
 
+func (i *Interpreter) VisitIfStmt(stmt *IfStmt) error {
+	condition, err := i.evaluate(stmt.Condition)
+	if err != nil {
+		return err
+	}
+
+	if i.isTruthy(condition) {
+		err := i.execute(stmt.ThenBranch)
+		if err != nil {
+			return err
+		}
+	} else if stmt.ElseBranch != nil {
+		err := i.execute(stmt.ElseBranch)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (i *Interpreter) VisitPrintExpr(expr *Print) error {
 	val, err := i.evaluate(expr.Expression)
 	if err != nil {

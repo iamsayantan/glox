@@ -94,6 +94,10 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 // statement --> exprStmt
 //				| printStmt
 func (p *Parser) statement() (Stmt, error) {
+	if p.match(If) {
+		return p.ifStatement()
+	}
+
 	if p.match(PRINT) {
 		return p.printStatement()
 	}
@@ -108,6 +112,43 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 
 	return p.expressionStatement()
+}
+
+func (p *Parser) ifStatement() (Stmt, error) {
+	// The parenthesis around the if statement is only half useful. We need some kind of delimiter between
+	// the condition and the then statement, otherwise the parser can't tell when it has reached the end 
+	// of the condition. But the opening parenthesis in the if condition doesn't do anything useful, it's
+	// only there because otherwise we'd end up with unbalanced parenthesis. Go requires the statement to
+	// be braced block, so the '{' acts as the end of the condition.
+	_, err := p.consume(LeftParen, "Expected '(' after 'if'")
+	if err != nil {
+		return nil, err
+	}
+
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(RightParen, "Expect ')' after if condition.")
+	if err != nil {
+		return nil, err
+	}
+
+	thenBranch, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	var elseBranch Stmt = nil
+	if p.match(Else) {
+		elseBranch, err = p.statement()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &IfStmt{Condition: condition, ThenBranch: thenBranch, ElseBranch: elseBranch}, nil
 }
 
 // block parses a block of statements when it encounters a '{'.

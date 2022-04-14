@@ -10,22 +10,33 @@ type Stmt interface {
 }
 
 type StmtVisitor interface {
-    VisitBlockStmt(stmt *Block) error
+	VisitBlockStmt(stmt *Block) error
 	VisitExpressionExpr(expr *Expression) error
 	VisitPrintExpr(expr *Print) error
 	VisitVarStmt(expr *VarStmt) error
+	VisitIfStmt(stmt *IfStmt) error
 }
 
 type Block struct {
-    Statements []Stmt
+	Statements []Stmt
 }
 
 func (b *Block) Accept(visitor StmtVisitor) error {
-    return visitor.VisitBlockStmt(b)
+	return visitor.VisitBlockStmt(b)
 }
 
 type Expression struct {
 	Expression Expr
+}
+
+type IfStmt struct {
+	Condition  Expr
+	ThenBranch Stmt
+	ElseBranch Stmt
+}
+
+func (i *IfStmt) Accept(visitor StmtVisitor) error {
+	return visitor.VisitIfStmt(i)
 }
 
 func (e *Expression) Accept(visitor StmtVisitor) error {
