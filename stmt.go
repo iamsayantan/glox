@@ -16,6 +16,7 @@ type StmtVisitor interface {
 	VisitVarStmt(expr *VarStmt) error
 	VisitIfStmt(stmt *IfStmt) error
 	VisitWhileStmt(stmt *WhileStmt) error
+	VisitFunctionStmt(stmt *FunctionStmt) error
 }
 
 type Block struct {
@@ -30,6 +31,20 @@ type Expression struct {
 	Expression Expr
 }
 
+func (e *Expression) Accept(visitor StmtVisitor) error {
+	return visitor.VisitExpressionExpr(e)
+}
+
+type FunctionStmt struct {
+	Name Token
+	Params []Token
+	Body []Stmt
+}
+
+func (f *FunctionStmt) Accept(visitor StmtVisitor) error {
+	return visitor.VisitFunctionStmt(f)
+}
+
 type IfStmt struct {
 	Condition  Expr
 	ThenBranch Stmt
@@ -40,9 +55,6 @@ func (i *IfStmt) Accept(visitor StmtVisitor) error {
 	return visitor.VisitIfStmt(i)
 }
 
-func (e *Expression) Accept(visitor StmtVisitor) error {
-	return visitor.VisitExpressionExpr(e)
-}
 
 type Print struct {
 	Expression Expr

@@ -49,8 +49,18 @@ func (p *Parser) Parse() []Stmt {
 // while parsing, the parser tries to recover using synchronize and continue parsing the next
 // statements.
 // declaration --> varDecl
+// 				   | funcDeclaration
 // 				   | statement
 func (p *Parser) declaration() (Stmt, error) {
+	if p.match(Fun) {
+		stmt, err := p.function("function")
+		if err != nil {
+			return nil, err
+		}
+
+		return stmt, nil
+	}
+
 	if p.match(Var) {
 		stmt, err := p.varDeclaration()
 		if err != nil {
@@ -62,6 +72,61 @@ func (p *Parser) declaration() (Stmt, error) {
 	}
 
 	return p.statement()
+}
+
+// function parses grammar for function declaration. Since we already matched and consumed
+// fun keyword, we don't need to do that again. Next we parse the list of parameters with 
+// the parentheses wrapped around them. The outer if condition handles the zero parameter
+// case and the inner for loop parses parameters as long as we find commas to separate them.
+// We consume the { at the  beginning of the body before calling block, as block() assumes
+// brace token has already been consumed. And this way we cal provide a more precise error
+// message if the brace is not provided.
+func (p *Parser) function(kind string) (Stmt, error) {
+	name, err := p.consume(Identifiers, "Expect " + kind + " name")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(LeftParen, "Expect '(' after " + kind + " name")
+	if err != nil {
+		return nil, err
+	}
+
+	parameters := make([]Token, 0)
+	if !p.check(RightParen) {
+		for {
+			if len(parameters) > 255 {
+				p.error(p.peek(), "Can't have more than 255 parameters")
+			}
+
+			param, err := p.consume(Identifiers, "Expect parameter name")
+			if err != nil {
+				return nil, err
+			}
+
+			parameters = append(parameters, param)
+			if !p.match(Comma) {
+				break
+			}
+		}
+	}
+
+	_, err = p.consume(RightParen, "Expect ')' after parameters")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(LeftBrace, "Expect '{' before " + kind + " body")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.block()
+	if err != nil {
+		return nil, err
+	}
+
+	return &FunctionStmt{Name: name, Body: body, Params: parameters}, nil
 }
 
 // varDeclaration parses variable declaration syntax. When the parser matches a var
@@ -507,7 +572,7 @@ func (p *Parser) factor() (Expr, error) {
 
 // unary parses an unary expression and primary expression.
 // unary --> ( "!" | "-" ) unary
-//			 | primary
+//			 | call
 func (p *Parser) unary() (Expr, error) {
 	if p.match(Bang, Minus) {
 		operator := p.previous()
@@ -519,7 +584,63 @@ func (p *Parser) unary() (Expr, error) {
 		return &Unary{Operator: operator, Right: right}, nil
 	}
 
-	return p.primary()
+	return p.call()
+}
+
+// call parses a function call grammar. This rule matches a primary expression followed by
+// zero or more function calls. If there is no parenthesis this matches a bare primary expression.
+// The * in the grammar allows calls like fn(1)(2)(3) function calls.
+// call --> primary ( "(" arguments? ")")*;
+func (p *Parser) call() (Expr, error) {
+	expr, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		if p.match(LeftParen) {
+			expr, err = p.finishCall(expr)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			break
+		}
+	}
+
+	return expr, nil
+}
+
+// finishCall is a helper that parses the function arguments. This is more or less
+// the grammar for arguments. Except we also check the zero argument condition. If
+// we find the ')' as the next token, we don't parse any expression.
+// arguments --> expression ( "," expression )*;
+func (p *Parser) finishCall(callee Expr) (Expr, error) {
+	arguments := make([]Expr, 0)
+	if !p.check(RightParen) {
+		for {
+			expr, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+
+			if len(arguments) >= 255 {
+				p.error(p.peek(), "Can't have more than 255 arguments.")
+			}
+
+			arguments = append(arguments, expr)
+			if !p.match(Comma) {
+				break
+			}
+		}
+	}
+
+	paren, err := p.consume(RightParen, "Expect ')' after arguments")
+	if err != nil {
+		return nil, err
+	}
+
+	return &Call{Callee: callee, Paren: paren, Arguments: arguments}, nil
 }
 
 // primary parses the primary expressions, these are of highest level of precedence.

@@ -8,6 +8,7 @@ type Visitor interface {
 	VisitAssignExpr(expr *Assign) (interface{}, error)
 	VisitLogicalExpr(expr *Logical) (interface{}, error)
 	VisitBinaryExpr(expr *Binary) (interface{}, error)
+	VisitCallExpr(expr *Call) (interface{}, error)
 	VisitGroupingExpr(expr *Grouping) (interface{}, error)
 	VisitLiteralExpr(expr *Literal) (interface{}, error)
 	VisitUnaryExpr(expr *Unary) (interface{}, error)
@@ -41,6 +42,16 @@ type Binary struct {
 
 func (b *Binary) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitBinaryExpr(b)
+}
+
+type Call struct {
+	Callee Expr
+	Paren Token
+	Arguments []Expr
+}
+
+func (c *Call) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitCallExpr(c)
 }
 
 type Grouping struct {

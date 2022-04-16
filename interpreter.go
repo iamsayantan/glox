@@ -8,11 +8,14 @@ import (
 
 type Interpreter struct {
 	runtime     *Runtime
+	globals     *Environment
 	environment *Environment
 }
 
 func NewInterpreter(runtime *Runtime) *Interpreter {
-	return &Interpreter{runtime: runtime, environment: NewEnvironment(nil)}
+	global := NewEnvironment(nil)
+	global.Define("clock", Clock{})
+	return &Interpreter{runtime: runtime, environment: global, globals: global}
 }
 
 type RuntimeError struct {
@@ -294,6 +297,51 @@ func (i *Interpreter) VisitBinaryExpr(expr *Binary) (interface{}, error) {
 
 	// unreachable
 	return nil, nil
+}
+
+// VisitCallExpr interprts function call tree node. First we evaluate the expression for the
+// callee, typically this expression is just an identifier that looks up the function by its
+// name, but it could be anything. Then we evaluate each of the arguments in order and store
+// them in a list. To call a function we cast the callee to the LoxCallable interface and call
+// the Call() method on it. The go representation of any lox object that can be called like an
+// function will implement this interface.
+func (i *Interpreter) VisitCallExpr(expr *Call) (interface{}, error) {
+	callee, err := i.evaluate(expr.Callee)
+	if err != nil {
+		return nil, err
+	}
+
+	arguments := make([]interface{}, 0)
+	for _, argument := range expr.Arguments {
+		ag, err := i.evaluate(argument)
+		if err != nil {
+			return nil, err
+		}
+
+		arguments = append(arguments, ag)
+	}
+
+	function, ok := callee.(LoxCallable)
+	if !ok {
+		return nil, NewRuntimeError(expr.Paren, "Can only call function and classes")
+	}
+
+	if len(arguments) != function.Arity() {
+		return nil, NewRuntimeError(expr.Paren, fmt.Sprintf("Expected %d arguments but got %d", function.Arity(), len(arguments)))
+	}
+
+	return function.Call(i, arguments)
+}
+
+// VisitFunctionStmt interprets a function syntax node. We take FunctionStmt syntax node, which
+// is a compile time representation of the function - and convert it to its runtime representation.
+// Here that's LoxFunction that wraps the syntax node. Here we also bind the resulting object to 
+// a new variable. So after creating LoxFunction, we create a new binding in the current environment
+// and store a reference to it there.
+func (i *Interpreter) VisitFunctionStmt(stmt *FunctionStmt) error {
+	function := NewLoxFunction(stmt)
+	i.environment.Define(stmt.Name.Lexeme, function)
+	return nil
 }
 
 // VisitGroupingExpr evaluates the grouping expressions, the node that we get from
