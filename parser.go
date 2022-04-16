@@ -175,6 +175,10 @@ func (p *Parser) statement() (Stmt, error) {
 		return p.forStatement()
 	}
 
+	if p.match(Return) {
+		return p.returnStatement()
+	}
+
 	if p.match(LeftBrace) {
 		stmt, err := p.block()
 		if err != nil {
@@ -185,6 +189,26 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 
 	return p.expressionStatement()
+}
+
+// returnStatement will parse a return statement. After fetching the previously consumed return 
+// keyword, we look for a value expression. As many different tokens can start an expression, it's
+// hard to tell if return value is present. So instead, we look for it's absence. Since semicolon
+// can't begin an expression, if the next token is that, we know there must not be a value.
+func (p *Parser) returnStatement() (Stmt, error) {
+	keyword := p.previous()
+	var value Expr
+	var err error
+	
+	if !p.check(Semicolon) {
+		value, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = p.consume(Semicolon, "Expect ';' after return value")
+	return &ReturnStmt{Keyword: keyword, Value: value}, nil
 }
 
 func (p *Parser) forStatement() (Stmt, error) {

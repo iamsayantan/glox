@@ -31,6 +31,18 @@ func NewRuntimeError(token Token, message string) error {
 	return &RuntimeError{token: token, message: message}
 }
 
+type ReturnErr struct {
+	Value interface{}
+}
+
+func (re *ReturnErr) Error() string {
+	return ""
+}
+
+func NewReturn(value interface{}) *ReturnErr {
+	return &ReturnErr{Value: value}
+}
+
 func (i *Interpreter) Interpret(statements []Stmt) {
 	for _, stmt := range statements {
 		err := i.execute(stmt)
@@ -205,6 +217,20 @@ func (i *Interpreter) VisitPrintExpr(expr *Print) error {
 	return nil
 }
 
+func (i *Interpreter) VisitReturnStmt(stmt *ReturnStmt) error {
+	var value interface{}
+	var err error
+
+	if stmt.Value != nil {
+		value, err = i.evaluate(stmt.Value)
+		if err != nil {
+			return nil
+		}
+	}
+
+	return &ReturnErr{Value: value}
+}
+
 func (i *Interpreter) stringify(val interface{}) string {
 	if val == nil {
 		return "nil"
@@ -339,7 +365,9 @@ func (i *Interpreter) VisitCallExpr(expr *Call) (interface{}, error) {
 // a new variable. So after creating LoxFunction, we create a new binding in the current environment
 // and store a reference to it there.
 func (i *Interpreter) VisitFunctionStmt(stmt *FunctionStmt) error {
-	function := NewLoxFunction(stmt)
+	// When we create the LoxFunction, we capture the current environment. This is the env that is
+	// active when the function is declared, not when it's called.
+	function := NewLoxFunction(stmt, i.environment)
 	i.environment.Define(stmt.Name.Lexeme, function)
 	return nil
 }

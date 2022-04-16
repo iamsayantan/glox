@@ -5,10 +5,11 @@ package glox
 // function.
 type LoxFunction struct {
 	declaration *FunctionStmt
+	closure *Environment
 }
 
-func NewLoxFunction(declaration *FunctionStmt) LoxCallable {
-	return LoxFunction{declaration: declaration}
+func NewLoxFunction(declaration *FunctionStmt, closure *Environment) LoxCallable {
+	return LoxFunction{declaration: declaration, closure: closure}
 }
 
 // Call will execute the function body with the arguments passed to it. The parameters are 
@@ -18,12 +19,21 @@ func NewLoxFunction(declaration *FunctionStmt) LoxCallable {
 // and argument lists and for each pair it creates a new variable with the parameter's name 
 // and binds it to the argument's value.
 func (lf LoxFunction) Call(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
-	env := NewEnvironment(interpreter.globals)
+	env := NewEnvironment(lf.closure)
 	for i, param := range lf.declaration.Params {
 		env.Define(param.Lexeme, arguments[i])
 	}
 
-	return  nil, interpreter.executeBlock(lf.declaration.Body, env)
+	err := interpreter.executeBlock(lf.declaration.Body, env)
+	if err != nil {
+		if runE, ok := err.(*ReturnErr); ok {
+			return runE.Value, nil
+		}
+
+		return nil, err
+	}
+
+	return  nil, nil
 }
 
 

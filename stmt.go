@@ -17,6 +17,7 @@ type StmtVisitor interface {
 	VisitIfStmt(stmt *IfStmt) error
 	VisitWhileStmt(stmt *WhileStmt) error
 	VisitFunctionStmt(stmt *FunctionStmt) error
+	VisitReturnStmt(stmt *ReturnStmt) error
 }
 
 type Block struct {
@@ -80,4 +81,13 @@ type WhileStmt struct {
 
 func (w *WhileStmt) Accept(visitor StmtVisitor) error {
 	return visitor.VisitWhileStmt(w)
+}
+
+type ReturnStmt struct {
+	Keyword Token
+	Value Expr
+}
+
+func (r *ReturnStmt) Accept(visitor StmtVisitor) error {
+	return visitor.VisitReturnStmt(r)
 }
