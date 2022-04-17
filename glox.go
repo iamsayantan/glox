@@ -37,7 +37,7 @@ func (r *Runtime) Run(args []string) {
 func (r *Runtime) RunFile(path string) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("error reading file: %s", err.Error()))
+		fmt.Printf("error reading file: %s\n", err.Error())
 		return
 	}
 
