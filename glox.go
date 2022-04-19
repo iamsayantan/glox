@@ -85,6 +85,13 @@ func (r *Runtime) run(source string) {
 		return
 	}
 
+	resolver := NewResolver(interpreter, r)
+	resolver.resolveStatements(statements)
+
+	if r.hadError {
+		return
+	}
+	
 	interpreter.Interpret(statements)
 }
 

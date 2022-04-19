@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrStackEmpty = errors.New("stack is empty")
+	ErrNotFound = errors.New("")
 )
 
 type Stack[T any] struct {
@@ -43,4 +44,20 @@ func (s *Stack[T]) Peek() (T, error) {
 
 	data = s.data[len(s.data)-1]
 	return data, nil
+}
+
+func (s *Stack[T]) Size() int {
+	return len(s.data)
+}
+
+func (s *Stack[T]) Get(index int) (T, error) {
+	var val T
+	var i int
+	for i, val = range s.data {
+		if i == index {
+			return val, nil
+		}
+	}
+
+	return val, ErrNotFound
 }

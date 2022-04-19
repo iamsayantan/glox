@@ -23,7 +23,7 @@ func (e *Environment) Define(name string, value interface{}) {
 }
 
 // Get looks up a variable in the environment. It starts by looking into the innermost
-// environment and goes up till it reaches the global scope. 
+// environment and goes up till it reaches the global scope.
 func (e *Environment) Get(name Token) (interface{}, error) {
 	val, ok := e.values[name.Lexeme]
 	if ok {
@@ -53,4 +53,25 @@ func (e *Environment) Assign(name Token, value interface{}) error {
 	}
 
 	return NewRuntimeError(name, "Undefined variable '"+name.Lexeme+"'.")
+}
+
+// GetAt will get the exact environment where the variable is defined in the environment chain and
+// return the value.
+func (e *Environment) GetAt(distance int, name string) interface{} {
+	return e.ancestor(distance).values[name]
+}
+
+// AssignAt walks fixed numbers of steps and stuffs the variable into that map.
+func (e *Environment) AssignAt(distance int, name Token, value interface{}) {
+	e.ancestor(distance).values[name.Lexeme] = value
+}
+
+// ancestor walks a fixed number of hops up the parent chain and returns the environment there.
+func (e *Environment) ancestor(distance int) *Environment {
+	env := e
+	for i := 0; i < distance; i++ {
+		env = env.enclosing
+	}
+
+	return env
 }

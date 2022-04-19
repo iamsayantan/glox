@@ -10,12 +10,13 @@ type Interpreter struct {
 	runtime     *Runtime
 	globals     *Environment
 	environment *Environment
+	locals      map[Expr]int
 }
 
 func NewInterpreter(runtime *Runtime) *Interpreter {
 	global := NewEnvironment(nil)
 	global.Define("clock", Clock{})
-	return &Interpreter{runtime: runtime, environment: global, globals: global}
+	return &Interpreter{runtime: runtime, environment: global, globals: global, locals: make(map[Expr]int)}
 }
 
 type RuntimeError struct {
@@ -123,12 +124,7 @@ func (i *Interpreter) VisitWhileStmt(stmt *WhileStmt) error {
 }
 
 func (i *Interpreter) VisitVarExpr(expr *VarExpr) (interface{}, error) {
-	val, err := i.environment.Get(expr.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	return val, nil
+	return i.lookupVariable(expr.Name, expr)
 }
 
 // VisitAssignExpr evaluates the right hand side expression to get the value and then stores it in the
@@ -143,9 +139,14 @@ func (i *Interpreter) VisitAssignExpr(expr *Assign) (interface{}, error) {
 		return nil, err
 	}
 
-	err = i.environment.Assign(expr.Name, val)
-	if err != nil {
-		return nil, err
+	distance, ok := i.locals[expr]
+	if ok {
+		i.environment.AssignAt(distance, expr.Name, val)
+	} else {
+		err = i.environment.Assign(expr.Name, val)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return val, nil
@@ -361,7 +362,7 @@ func (i *Interpreter) VisitCallExpr(expr *Call) (interface{}, error) {
 
 // VisitFunctionStmt interprets a function syntax node. We take FunctionStmt syntax node, which
 // is a compile time representation of the function - and convert it to its runtime representation.
-// Here that's LoxFunction that wraps the syntax node. Here we also bind the resulting object to 
+// Here that's LoxFunction that wraps the syntax node. Here we also bind the resulting object to
 // a new variable. So after creating LoxFunction, we create a new binding in the current environment
 // and store a reference to it there.
 func (i *Interpreter) VisitFunctionStmt(stmt *FunctionStmt) error {
@@ -446,4 +447,20 @@ func (i *Interpreter) checkNumberOperandBoth(operator Token, left, right interfa
 	}
 
 	return NewRuntimeError(operator, "Both operands must be numbers")
+}
+
+func (i *Interpreter) resolve(expr Expr, depth int) {
+	i.locals[expr] = depth
+}
+
+// lookupVariable resolves a variable. First we look up the resolved distance in the local map. Remember
+// we only resolved local variables, globals are treated differently and don't end up in the map. So, if
+// we don't find it in the local map, then it must be in the global environment.
+func (i *Interpreter) lookupVariable(name Token, expr Expr) (interface{}, error) {
+	distance, ok := i.locals[expr]
+	if ok {
+		return i.environment.GetAt(distance, name.Lexeme), nil
+	} else {
+		return i.globals.Get(name)
+	}
 }
