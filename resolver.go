@@ -97,7 +97,7 @@ func (r *Resolver) VisitUnaryExpr(expr *Unary) (interface{}, error) {
 func (r *Resolver) VisitVarExpr(expr *VarExpr) (interface{}, error) {
 	if !r.scopes.IsEmpty() {
 		scope, err := r.scopes.Peek()
-		if err != nil {
+		if err == nil {
 			if val, ok := scope[expr.Name.Lexeme]; ok && !val {
 				r.runtime.tokenError(expr.Name, "Can't read local variable in its own initializer.")
 			}
