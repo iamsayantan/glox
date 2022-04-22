@@ -1,6 +1,8 @@
 package glox
 
-import "github.com/iamsayantan/glox/util"
+import (
+	"github.com/iamsayantan/glox/util"
+)
 
 type FunctionType int
 
@@ -44,7 +46,7 @@ func (r *Resolver) VisitAssignExpr(expr *Assign) (interface{}, error) {
 }
 
 func (r *Resolver) VisitLogicalExpr(expr *Logical) (interface{}, error) {
-	// Since static analysis does no control flow or short circuiting, logical expression is 
+	// Since static analysis does no control flow or short circuiting, logical expression is
 	// exactly same as other binary operators.
 	r.resolveExpr(expr.Left)
 	r.resolveExpr(expr.Right)
@@ -115,6 +117,7 @@ func (r *Resolver) VisitBlockStmt(stmt *Block) error {
 		return err
 	}
 
+	r.endScope()
 	return nil
 }
 
@@ -187,7 +190,7 @@ func (r *Resolver) VisitReturnStmt(stmt *ReturnStmt) error {
 	if r.currentFunction == FunctionTypeNone {
 		r.runtime.tokenError(stmt.Keyword, "Can't return from top-level code")
 	}
-	
+
 	if stmt.Value != nil {
 		r.resolveExpr(stmt.Value)
 	}
@@ -203,7 +206,6 @@ func (r *Resolver) resolveStatements(statements []Stmt) error {
 		}
 	}
 
-	r.endScope()
 	return nil
 }
 
@@ -234,7 +236,7 @@ func (r *Resolver) declare(name Token) {
 
 	scope, _ := r.scopes.Peek()
 
-	// when we declare a variable in a local scope, we already know the names of 
+	// when we declare a variable in a local scope, we already know the names of
 	// every previously declared variables in that same scope. If we see collision
 	// we report an error.
 	if _, ok := scope[name.Lexeme]; ok {
@@ -270,14 +272,14 @@ func (r *Resolver) resolveLocal(expr Expr, name Token) {
 	}
 }
 
-// resolveFunction resolves a function's body. It creates a new scope for the body and then binds 
-// variables for each of the function's parameters. Once that's done, it resolves the function's 
+// resolveFunction resolves a function's body. It creates a new scope for the body and then binds
+// variables for each of the function's parameters. Once that's done, it resolves the function's
 // body in the scope. The difference from how interpreter handles is that, at runtime, declaring
 // a function doesn't do anything to the function's body, the body doesn't get touched until the
 // function is called. But in static analysis we immediately traverse into the body.
 func (r *Resolver) resolveFunction(function *FunctionStmt, funcType FunctionType) {
 	// We stash the previous value of the field in a local variable first. As Lox has local functions,
-	// we can nest function declaration arbitrarily deeply. We need to track not just we are in a 
+	// we can nest function declaration arbitrarily deeply. We need to track not just we are in a
 	// function, but how many we're in.
 	enclosingFunction := r.currentFunction
 	r.currentFunction = funcType
