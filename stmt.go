@@ -18,6 +18,7 @@ type StmtVisitor interface {
 	VisitWhileStmt(stmt *WhileStmt) error
 	VisitFunctionStmt(stmt *FunctionStmt) error
 	VisitReturnStmt(stmt *ReturnStmt) error
+	VisitClassStmt(stmt *ClassStmt) error
 }
 
 type Block struct {
@@ -37,9 +38,9 @@ func (e *Expression) Accept(visitor StmtVisitor) error {
 }
 
 type FunctionStmt struct {
-	Name Token
+	Name   Token
 	Params []Token
-	Body []Stmt
+	Body   []Stmt
 }
 
 func (f *FunctionStmt) Accept(visitor StmtVisitor) error {
@@ -55,7 +56,6 @@ type IfStmt struct {
 func (i *IfStmt) Accept(visitor StmtVisitor) error {
 	return visitor.VisitIfStmt(i)
 }
-
 
 type Print struct {
 	Expression Expr
@@ -76,7 +76,7 @@ func (v *VarStmt) Accept(visitor StmtVisitor) error {
 
 type WhileStmt struct {
 	Condition Expr
-	Body Stmt
+	Body      Stmt
 }
 
 func (w *WhileStmt) Accept(visitor StmtVisitor) error {
@@ -85,9 +85,18 @@ func (w *WhileStmt) Accept(visitor StmtVisitor) error {
 
 type ReturnStmt struct {
 	Keyword Token
-	Value Expr
+	Value   Expr
 }
 
 func (r *ReturnStmt) Accept(visitor StmtVisitor) error {
 	return visitor.VisitReturnStmt(r)
+}
+
+type ClassStmt struct {
+	Name    Token
+	Methods []*FunctionStmt
+}
+
+func (c *ClassStmt) Accept(visitor StmtVisitor) error {
+	return visitor.VisitClassStmt(c)
 }

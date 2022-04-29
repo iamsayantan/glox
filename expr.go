@@ -13,6 +13,8 @@ type Visitor interface {
 	VisitLiteralExpr(expr *Literal) (interface{}, error)
 	VisitUnaryExpr(expr *Unary) (interface{}, error)
 	VisitVarExpr(expr *VarExpr) (interface{}, error)
+	VisitGetExpr(expr *GetExpr) (interface{}, error)
+	VisitSetExpr(expr *SetExpr) (interface{}, error)
 }
 
 type Assign struct {
@@ -85,4 +87,23 @@ type VarExpr struct {
 
 func (v *VarExpr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitVarExpr(v)
+}
+
+type GetExpr struct {
+	Object Expr
+	Name Token
+}
+
+func (g *GetExpr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitGetExpr(g)
+}
+
+type SetExpr struct {
+	Object Expr
+	Name Token
+	Value Expr
+}
+
+func (se *SetExpr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitSetExpr(se)
 }

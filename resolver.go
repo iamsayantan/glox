@@ -108,6 +108,31 @@ func (r *Resolver) VisitVarExpr(expr *VarExpr) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Resolver) VisitClassStmt(stmt *ClassStmt) error {
+	r.declare(stmt.Name)
+	r.define(stmt.Name)
+
+	return nil
+}
+
+func (r *Resolver) VisitGetExpr(expr *GetExpr) (interface{}, error) {
+	return r.resolveExpr(expr.Object)
+}
+
+func (r *Resolver) VisitSetExpr(expr *SetExpr) (interface{}, error) {
+	_, err := r.resolveExpr(expr.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = r.resolveExpr(expr.Object)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // VisitBlockStmt will visit a block statement which will create a new lexical scope,
 // traverse the statements inside the block and then discard the scope.
 func (r *Resolver) VisitBlockStmt(stmt *Block) error {

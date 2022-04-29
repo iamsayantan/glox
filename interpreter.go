@@ -64,6 +64,47 @@ func (i *Interpreter) execute(stmt Stmt) error {
 	return nil
 }
 
+func (i *Interpreter) VisitClassStmt(stmt *ClassStmt) error {
+	i.environment.Define(stmt.Name.Lexeme, nil)
+	klass := NewLoxClass(stmt.Name.Lexeme)
+	i.environment.Assign(stmt.Name, klass)
+
+	return nil
+}
+
+func (i *Interpreter) VisitGetExpr(expr *GetExpr) (interface{}, error) {
+	object, err := i.evaluate(expr.Object)
+	if err != nil {
+		return nil, err
+	}
+
+	if loxInstance, ok := object.(*LoxInstance); ok {
+		return loxInstance.Get(expr.Name)
+	}
+
+	return nil, NewRuntimeError(expr.Name, "Only instances have properties")
+}
+
+func (i *Interpreter) VisitSetExpr(expr *SetExpr) (interface{}, error) {
+	object, err := i.evaluate(expr.Object)
+	if err != nil {
+		return nil, err
+	}
+
+	loxInstance, ok := object.(*LoxInstance)
+	if !ok {
+		return nil, NewRuntimeError(expr.Name, "Only instances have fields")
+	}
+
+	value, err := i.evaluate(expr.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	loxInstance.Set(expr.Name, value)
+	return value, nil
+}
+
 func (i *Interpreter) VisitBlockStmt(stmt *Block) error {
 	return i.executeBlock(stmt.Statements, NewEnvironment(i.environment))
 }

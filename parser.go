@@ -48,17 +48,17 @@ func (p *Parser) Parse() []Stmt {
 // declaration is called repeatedly when parsing a series of statements. If we get any error
 // while parsing, the parser tries to recover using synchronize and continue parsing the next
 // statements.
-// declaration --> varDecl
+// declaration --> classDecl
 // 				   | funcDeclaration
+//                 | varDecl
 // 				   | statement
 func (p *Parser) declaration() (Stmt, error) {
-	if p.match(Fun) {
-		stmt, err := p.function("function")
-		if err != nil {
-			return nil, err
-		}
+	if p.match(Class) {
+		return p.classDeclaration()
+	}
 
-		return stmt, nil
+	if p.match(Fun) {
+		return p.function("function")
 	}
 
 	if p.match(Var) {
@@ -72,6 +72,37 @@ func (p *Parser) declaration() (Stmt, error) {
 	}
 
 	return p.statement()
+}
+
+// classDeclaration parses a class syntax declaration.
+// classDecl --> "class" IDENTIFIER "{" funcDeclaration "}"
+func (p *Parser) classDeclaration() (Stmt, error) {
+	name, err := p.consume(Identifiers, "Expect class name")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(LeftBrace, "Expect '{' before class body.")
+	if err != nil {
+		return nil, err
+	}
+
+	var methods []*FunctionStmt
+	for !p.check(RightBrace) && !p.isAtEnd() {
+		method, err := p.function("method")
+		if err != nil {
+			return nil, err
+		}
+		
+		methods = append(methods, method.(*FunctionStmt))
+	}
+
+	_, err = p.consume(RightBrace, "Expect '}' after class body.")
+	if err != nil {
+		return nil, err
+	}
+
+	return &ClassStmt{Name: name, Methods: methods}, nil
 }
 
 // function parses grammar for function declaration. Since we already matched and consumed
@@ -423,8 +454,11 @@ func (p *Parser) expression() (Expr, error) {
 // any expression of higher precedence. If we find an '=',  we parse the right hand side and
 // then wrap it all up in an assignment tree node. The difference from other binary expressions
 // is that we don't loop to build up a sequence of same operator. Since assignment is right associative
-// we call assignment() recursively to parse the right hand side.
-// assignment --> IDENTIFIER "=" assignment
+// we call assignment() recursively to parse the right hand side. Unlike getters, setters don't chain.
+// However the reference to call allows any high-precedence expression before the last dot, including
+// any number of getters.
+// breakfast.omelette.filling.meat = ham
+// assignment --> ( call ".")? IDENTIFIER "=" assignment
 // 				  | logic_or
 func (p *Parser) assignment() (Expr, error) {
 	expr, err := p.or()
@@ -446,6 +480,8 @@ func (p *Parser) assignment() (Expr, error) {
 		if variable, ok := expr.(*VarExpr); ok {
 			name := variable.Name
 			return &Assign{Name: name, Value: value}, nil
+		} else if getExpr, ok := expr.(*GetExpr); ok {
+			return &SetExpr{Object: getExpr.Object, Name: getExpr.Name, Value: value}, nil
 		} else {
 			p.error(equals, "Invalid assignment target")
 			return nil, nil
@@ -613,8 +649,10 @@ func (p *Parser) unary() (Expr, error) {
 
 // call parses a function call grammar. This rule matches a primary expression followed by
 // zero or more function calls. If there is no parenthesis this matches a bare primary expression.
-// The * in the grammar allows calls like fn(1)(2)(3) function calls.
-// call --> primary ( "(" arguments? ")")*;
+// The * in the grammar allows calls like fn(1)(2)(3) function calls. The for loop corresponds with
+// the * in the grammer rule. We zip along the tokens building up a chain of calls and gets as we
+// find parentheses and dots: egg.scramble(3).with(cheddar)
+// call --> primary ( "(" arguments? ")" | "." IDENTIFIER )*;
 func (p *Parser) call() (Expr, error) {
 	expr, err := p.primary()
 	if err != nil {
@@ -627,6 +665,12 @@ func (p *Parser) call() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
+		} else if p.match(Dot) {
+			name, err := p.consume(Identifiers, "Expect property name after '.'")
+			if err != nil {
+				return nil, err
+			}
+			expr = &GetExpr{Name: name, Object: expr}
 		} else {
 			break
 		}
