@@ -732,6 +732,10 @@ func (p *Parser) primary() (Expr, error) {
 		return &Literal{Value: p.previous().Literal}, nil
 	}
 
+	if p.match(This) {
+		return &ThisExpr{Keyword: p.previous()}, nil
+	}
+
 	if p.match(Identifiers) {
 		return &VarExpr{Name: p.previous()}, nil
 	}

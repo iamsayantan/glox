@@ -15,6 +15,7 @@ type Visitor interface {
 	VisitVarExpr(expr *VarExpr) (interface{}, error)
 	VisitGetExpr(expr *GetExpr) (interface{}, error)
 	VisitSetExpr(expr *SetExpr) (interface{}, error)
+	VisitThisExpr(expr *ThisExpr) (interface{}, error)
 }
 
 type Assign struct {
@@ -106,4 +107,12 @@ type SetExpr struct {
 
 func (se *SetExpr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitSetExpr(se)
+}
+
+type ThisExpr struct {
+	Keyword Token
+}
+
+func (th *ThisExpr) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitThisExpr(th)
 }

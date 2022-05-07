@@ -66,7 +66,15 @@ func (i *Interpreter) execute(stmt Stmt) error {
 
 func (i *Interpreter) VisitClassStmt(stmt *ClassStmt) error {
 	i.environment.Define(stmt.Name.Lexeme, nil)
-	klass := NewLoxClass(stmt.Name.Lexeme)
+
+	methods := make(map[string]LoxFunction)
+
+	for _, method := range stmt.Methods{
+		function := NewLoxFunction(method, i.environment)
+		methods[method.Name.Lexeme] = function.(LoxFunction)
+	}
+
+	klass := NewLoxClass(stmt.Name.Lexeme, methods)
 	i.environment.Assign(stmt.Name, klass)
 
 	return nil
@@ -451,6 +459,10 @@ func (i *Interpreter) VisitUnaryExpr(expr *Unary) (interface{}, error) {
 
 	// unreachable.
 	return nil, nil
+}
+
+func (i *Interpreter) VisitThisExpr(expr *ThisExpr) (interface{}, error) {
+	return i.lookupVariable(expr.Keyword, expr)
 }
 
 // evaluate is a helper method that sends the expression back to the interpreter's visitor

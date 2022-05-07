@@ -1,7 +1,7 @@
 package glox
 
 type LoxInstance struct {
-	klass *LoxClass
+	klass  *LoxClass
 	fields map[string]interface{}
 }
 
@@ -18,8 +18,12 @@ func (li *LoxInstance) Get(name Token) (interface{}, error) {
 		return val, nil
 	}
 
-	return nil, NewRuntimeError(name, "Undefined property '" + name.Lexeme + "'")
-} 
+	if method, err := li.klass.findMethod(name.Lexeme); err == nil {
+		return method.Bind(li), nil
+	}
+
+	return nil, NewRuntimeError(name, "Undefined property '"+name.Lexeme+"'")
+}
 
 func (li *LoxInstance) Set(name Token, value interface{}) {
 	li.fields[name.Lexeme] = value

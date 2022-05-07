@@ -6,9 +6,17 @@ import (
 
 type FunctionType int
 
+type ClassType int
+
 const (
-	FunctionTypeNone = iota
+	FunctionTypeNone FunctionType = iota
 	FunctionTypeFunction
+	FunctionTypeMethod
+)
+
+const (
+	ClassTypeNone ClassType = iota
+	ClassTypeClass
 )
 
 type Resolver struct {
@@ -23,13 +31,14 @@ type Resolver struct {
 	scopes util.Stack[map[string]bool]
 
 	currentFunction FunctionType
+	currentClass ClassType
 
 	runtime *Runtime
 }
 
 func NewResolver(i *Interpreter, runtime *Runtime) *Resolver {
 	stack := util.NewStack[map[string]bool]()
-	return &Resolver{interpreter: i, scopes: *stack, runtime: runtime, currentFunction: FunctionTypeNone}
+	return &Resolver{interpreter: i, scopes: *stack, runtime: runtime, currentFunction: FunctionTypeNone, currentClass: ClassTypeNone}
 }
 
 // VisitAssignExpr resolves an assignment expression, first we resolve the expression for
@@ -112,7 +121,39 @@ func (r *Resolver) VisitClassStmt(stmt *ClassStmt) error {
 	r.declare(stmt.Name)
 	r.define(stmt.Name)
 
+	enclosingClass := r.currentClass
+	r.currentClass = ClassTypeClass
+	// we resolve "this" exactly like any other local variable, using "this" as the name.
+	// Before we start resolving the method bodies, we push a new scope and define "this"
+	// in it as any other variable. Then when we are done, we discard the surrounding scope.
+	r.beginScope()
+
+	scope, err := r.scopes.Peek()
+	if err != nil {
+		return err
+	}
+
+	scope["this"] = true
+
+	for _, method := range stmt.Methods {
+		declaration := FunctionTypeMethod
+		r.resolveFunction(method, declaration)
+	}
+
+	r.endScope()
+
+	r.currentClass = enclosingClass
 	return nil
+}
+
+func (r *Resolver) VisitThisExpr(expr *ThisExpr) (interface{}, error) {
+	if r.currentClass == ClassTypeNone {
+		r.runtime.tokenError(expr.Keyword, "Can't use 'this' outside of a class.")
+		return nil, nil
+	}
+	
+	r.resolveLocal(expr, expr.Keyword)
+	return nil, nil
 }
 
 func (r *Resolver) VisitGetExpr(expr *GetExpr) (interface{}, error) {
