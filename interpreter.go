@@ -70,7 +70,7 @@ func (i *Interpreter) VisitClassStmt(stmt *ClassStmt) error {
 	methods := make(map[string]LoxFunction)
 
 	for _, method := range stmt.Methods{
-		function := NewLoxFunction(method, i.environment)
+		function := NewLoxFunction(method, i.environment, method.Name.Lexeme == "init")
 		methods[method.Name.Lexeme] = function.(LoxFunction)
 	}
 
@@ -417,7 +417,7 @@ func (i *Interpreter) VisitCallExpr(expr *Call) (interface{}, error) {
 func (i *Interpreter) VisitFunctionStmt(stmt *FunctionStmt) error {
 	// When we create the LoxFunction, we capture the current environment. This is the env that is
 	// active when the function is declared, not when it's called.
-	function := NewLoxFunction(stmt, i.environment)
+	function := NewLoxFunction(stmt, i.environment, false)
 	i.environment.Define(stmt.Name.Lexeme, function)
 	return nil
 }

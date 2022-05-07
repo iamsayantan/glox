@@ -19,10 +19,28 @@ func (lc *LoxClass) String() string {
 
 func (lc *LoxClass) Call(ip *Interpreter, arguments []interface{}) (interface{}, error) {
 	instance := NewLoxInstance(lc)
+
+	// When a class is called, and the lox instance is created, we look for an "init" method,
+	// If we find it, we immediately bind and invoke it just like normal method call. The
+	// argument list is forwarded along.
+	initializer, err := lc.findMethod("init")
+	if err == nil {
+		initializer.Bind(instance).Call(ip, arguments)
+	}
+
+
 	return instance, nil
 }
 
+// Arity returns the arity of the class. If there is an initializer, that method's arity determines
+// how many arguments users must pass to call the class. But the initializer is not required though,
+// in that case the arity is zero.
 func (lc *LoxClass) Arity() int {
+	initializer, err := lc.findMethod("init")
+	if err == nil {
+		return initializer.Arity()
+	}
+
 	return 0
 }
 

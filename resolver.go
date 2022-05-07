@@ -12,6 +12,7 @@ const (
 	FunctionTypeNone FunctionType = iota
 	FunctionTypeFunction
 	FunctionTypeMethod
+	FunctionTypeInitializer
 )
 
 const (
@@ -137,6 +138,10 @@ func (r *Resolver) VisitClassStmt(stmt *ClassStmt) error {
 
 	for _, method := range stmt.Methods {
 		declaration := FunctionTypeMethod
+		if method.Name.Lexeme == "init" {
+			declaration = FunctionTypeInitializer
+		}
+		
 		r.resolveFunction(method, declaration)
 	}
 
@@ -151,7 +156,7 @@ func (r *Resolver) VisitThisExpr(expr *ThisExpr) (interface{}, error) {
 		r.runtime.tokenError(expr.Keyword, "Can't use 'this' outside of a class.")
 		return nil, nil
 	}
-	
+
 	r.resolveLocal(expr, expr.Keyword)
 	return nil, nil
 }
@@ -258,6 +263,11 @@ func (r *Resolver) VisitReturnStmt(stmt *ReturnStmt) error {
 	}
 
 	if stmt.Value != nil {
+		if r.currentFunction == FunctionTypeInitializer {
+			r.runtime.tokenError(stmt.Keyword, "Can't return a value from initializer.")
+			return nil
+		}
+		
 		r.resolveExpr(stmt.Value)
 	}
 
