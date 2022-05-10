@@ -5,17 +5,16 @@ import "errors"
 var ErrMethodNotFound = errors.New("method not found with the given name")
 
 type LoxClass struct {
-	Name string
-	methods map[string]LoxFunction
+	Name       string
+	Superclass *LoxClass
+	methods    map[string]LoxFunction
 }
 
-func NewLoxClass(name string, methods map[string]LoxFunction) *LoxClass {
-	return &LoxClass{Name: name, methods: methods}
+func NewLoxClass(name string, superclass *LoxClass, methods map[string]LoxFunction) *LoxClass {
+	return &LoxClass{Name: name, Superclass: superclass, methods: methods}
 }
 
-func (lc *LoxClass) String() string {
-	return lc.Name
-}
+
 
 func (lc *LoxClass) Call(ip *Interpreter, arguments []interface{}) (interface{}, error) {
 	instance := NewLoxInstance(lc)
@@ -27,7 +26,6 @@ func (lc *LoxClass) Call(ip *Interpreter, arguments []interface{}) (interface{},
 	if err == nil {
 		initializer.Bind(instance).Call(ip, arguments)
 	}
-
 
 	return instance, nil
 }

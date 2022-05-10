@@ -32,7 +32,7 @@ type Resolver struct {
 	scopes util.Stack[map[string]bool]
 
 	currentFunction FunctionType
-	currentClass ClassType
+	currentClass    ClassType
 
 	runtime *Runtime
 }
@@ -122,6 +122,14 @@ func (r *Resolver) VisitClassStmt(stmt *ClassStmt) error {
 	r.declare(stmt.Name)
 	r.define(stmt.Name)
 
+	if stmt.Superclass != nil && stmt.Superclass.Name.Lexeme == stmt.Name.Lexeme {
+		r.runtime.tokenError(stmt.Superclass.Name, "A class can't inherit from itself.")
+	}
+
+	if stmt.Superclass != nil {
+		r.resolveExpr(stmt.Superclass)
+	}
+
 	enclosingClass := r.currentClass
 	r.currentClass = ClassTypeClass
 	// we resolve "this" exactly like any other local variable, using "this" as the name.
@@ -141,7 +149,7 @@ func (r *Resolver) VisitClassStmt(stmt *ClassStmt) error {
 		if method.Name.Lexeme == "init" {
 			declaration = FunctionTypeInitializer
 		}
-		
+
 		r.resolveFunction(method, declaration)
 	}
 
@@ -267,7 +275,7 @@ func (r *Resolver) VisitReturnStmt(stmt *ReturnStmt) error {
 			r.runtime.tokenError(stmt.Keyword, "Can't return a value from initializer.")
 			return nil
 		}
-		
+
 		r.resolveExpr(stmt.Value)
 	}
 

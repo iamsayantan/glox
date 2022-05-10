@@ -75,11 +75,22 @@ func (p *Parser) declaration() (Stmt, error) {
 }
 
 // classDeclaration parses a class syntax declaration.
-// classDecl --> "class" IDENTIFIER "{" funcDeclaration "}"
+// classDecl --> "class" IDENTIFIER ( "<" IDENTIFIER)?
+//                "{" funcDeclaration "}"
 func (p *Parser) classDeclaration() (Stmt, error) {
 	name, err := p.consume(Identifiers, "Expect class name")
 	if err != nil {
 		return nil, err
+	}
+
+	var superclass *VarExpr
+	if p.match(Less) {
+		_, err = p.consume(Identifiers, "Expect superclass name.")
+		if err != nil {
+			return nil, err
+		}
+
+		superclass = &VarExpr{Name: p.previous()}
 	}
 
 	_, err = p.consume(LeftBrace, "Expect '{' before class body.")
@@ -102,7 +113,7 @@ func (p *Parser) classDeclaration() (Stmt, error) {
 		return nil, err
 	}
 
-	return &ClassStmt{Name: name, Methods: methods}, nil
+	return &ClassStmt{Name: name, Superclass: superclass, Methods: methods}, nil
 }
 
 // function parses grammar for function declaration. Since we already matched and consumed

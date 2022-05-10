@@ -65,16 +65,30 @@ func (i *Interpreter) execute(stmt Stmt) error {
 }
 
 func (i *Interpreter) VisitClassStmt(stmt *ClassStmt) error {
+	var superclass interface{}
+	var err error
+	if stmt.Superclass != nil {
+		superclass, err = i.evaluate(stmt.Superclass)
+		if err != nil {
+			return err
+		}
+
+		if _, ok := superclass.(*LoxClass); !ok {
+			i.runtime.runtimeError(NewRuntimeError(stmt.Superclass.Name, "Superclass must be a class"))
+		}
+	}
+
 	i.environment.Define(stmt.Name.Lexeme, nil)
 
 	methods := make(map[string]LoxFunction)
 
-	for _, method := range stmt.Methods{
+	for _, method := range stmt.Methods {
 		function := NewLoxFunction(method, i.environment, method.Name.Lexeme == "init")
 		methods[method.Name.Lexeme] = function.(LoxFunction)
 	}
 
-	klass := NewLoxClass(stmt.Name.Lexeme, methods)
+	super, _ := superclass.(*LoxClass)
+	klass := NewLoxClass(stmt.Name.Lexeme, super, methods)
 	i.environment.Assign(stmt.Name, klass)
 
 	return nil
