@@ -80,6 +80,15 @@ func (i *Interpreter) VisitClassStmt(stmt *ClassStmt) error {
 
 	i.environment.Define(stmt.Name.Lexeme, nil)
 
+	// When we are evaluating a subclass definition, we create a new environment for the superclass.
+	// Now when we are creating the LoxFunction instance for the methods, those will capture the current
+	// environment where the super is defined.Once that is done, the environment is popped.
+	if stmt.Superclass != nil {
+		env := NewEnvironment(i.environment)
+		env.Define("super", superclass)
+		i.environment = env
+	}
+
 	methods := make(map[string]LoxFunction)
 
 	for _, method := range stmt.Methods {
@@ -89,6 +98,10 @@ func (i *Interpreter) VisitClassStmt(stmt *ClassStmt) error {
 
 	super, _ := superclass.(*LoxClass)
 	klass := NewLoxClass(stmt.Name.Lexeme, super, methods)
+	if stmt.Superclass != nil {
+		i.environment = i.environment.enclosing
+	}
+
 	i.environment.Assign(stmt.Name, klass)
 
 	return nil
@@ -125,6 +138,32 @@ func (i *Interpreter) VisitSetExpr(expr *SetExpr) (interface{}, error) {
 
 	loxInstance.Set(expr.Name, value)
 	return value, nil
+}
+
+func (i *Interpreter) VisitSuperExpr(expr *SuperExpr) (interface{}, error) {
+	distance, ok := i.locals[expr]
+	if !ok {
+		return nil, NewRuntimeError(expr.Keyword, "invalid code")
+	}
+
+	superclass, ok := i.environment.GetAt(distance, "super").(*LoxClass)
+	if !ok {
+		return nil, NewRuntimeError(expr.Keyword, "invalid code")
+	}
+
+	// The environment where "this" is bound, is always right inside the environment where
+	// we store "super". So offsetting distance by one looks up "this" in an inner environment.
+	object, ok := i.environment.GetAt(distance-1, "this").(*LoxInstance)
+	if !ok {
+		return nil, NewRuntimeError(expr.Keyword, "invalid code")
+	}
+
+	method, err := superclass.findMethod(expr.Method.Lexeme)
+	if err != nil {
+		return nil, NewRuntimeError(expr.Method, "Undefined property '"+expr.Keyword.Lexeme+"'")
+	}
+
+	return method.Bind(object), nil
 }
 
 func (i *Interpreter) VisitBlockStmt(stmt *Block) error {

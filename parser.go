@@ -723,9 +723,9 @@ func (p *Parser) finishCall(callee Expr) (Expr, error) {
 }
 
 // primary parses the primary expressions, these are of highest level of precedence.
-// primary --> NUMBER | STRING | "true" | "false" | "nil"
-//            | "(" expression ")"
-//            | IDENTIFIER;
+// primary --> NUMBER | STRING | "true" | "false" | "nil" | "this"
+//            | "(" expression ")" | IDENTIFIER
+//            | "super" "." IDENTIFIER;
 func (p *Parser) primary() (Expr, error) {
 	if p.match(False) {
 		return &Literal{Value: false}, nil
@@ -741,6 +741,22 @@ func (p *Parser) primary() (Expr, error) {
 
 	if p.match(String, Number) {
 		return &Literal{Value: p.previous().Literal}, nil
+	}
+
+	if p.match(Super) {
+		keword := p.previous()
+		
+		_, err := p.consume(Dot, "Expect '.' after 'super'")
+		if err != nil {
+			return nil, err
+		}
+
+		method, err := p.consume(Identifiers, "Expect superclass method name")
+		if err != nil {
+			return nil, err
+		}
+
+		return &SuperExpr{Method: method, Keyword: keword}, nil
 	}
 
 	if p.match(This) {

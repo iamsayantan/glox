@@ -18,6 +18,7 @@ const (
 const (
 	ClassTypeNone ClassType = iota
 	ClassTypeClass
+	ClassTypeSubclass
 )
 
 type Resolver struct {
@@ -119,6 +120,9 @@ func (r *Resolver) VisitVarExpr(expr *VarExpr) (interface{}, error) {
 }
 
 func (r *Resolver) VisitClassStmt(stmt *ClassStmt) error {
+	enclosingClass := r.currentClass
+	r.currentClass = ClassTypeClass
+
 	r.declare(stmt.Name)
 	r.define(stmt.Name)
 
@@ -127,11 +131,19 @@ func (r *Resolver) VisitClassStmt(stmt *ClassStmt) error {
 	}
 
 	if stmt.Superclass != nil {
+		r.currentClass = ClassTypeSubclass
 		r.resolveExpr(stmt.Superclass)
 	}
 
-	enclosingClass := r.currentClass
-	r.currentClass = ClassTypeClass
+	if stmt.Superclass != nil {
+		// If the class declaration has a superclass, then we create a new scope surrounding
+		// all of its methods. In that scope we define the name "super". Once we are done 
+		// resolving the methods, we discard the scope.
+		r.beginScope()
+		superScope, _ := r.scopes.Peek()
+		superScope["super"] = true
+	}
+
 	// we resolve "this" exactly like any other local variable, using "this" as the name.
 	// Before we start resolving the method bodies, we push a new scope and define "this"
 	// in it as any other variable. Then when we are done, we discard the surrounding scope.
@@ -154,6 +166,10 @@ func (r *Resolver) VisitClassStmt(stmt *ClassStmt) error {
 	}
 
 	r.endScope()
+
+	if stmt.Superclass != nil {
+		r.endScope()
+	}
 
 	r.currentClass = enclosingClass
 	return nil
@@ -184,6 +200,20 @@ func (r *Resolver) VisitSetExpr(expr *SetExpr) (interface{}, error) {
 		return nil, err
 	}
 
+	return nil, nil
+}
+
+// VisitSuperExpr resolves a "super" expression. The super expression is resolved just like a 
+// variable. The resolution stores the number of hops along the environment chain that the interpreter
+// needs to walk to find the environment where super is stored.
+func (r *Resolver) VisitSuperExpr(expr *SuperExpr) (interface{}, error) {
+	if r.currentClass == ClassTypeNone {
+		r.runtime.tokenError(expr.Keyword, "Can't use 'super' outside of a class.")
+	} else if r.currentClass != ClassTypeSubclass {
+		r.runtime.tokenError(expr.Keyword, "Can't use 'super' in class with no superclass.")
+	}
+	
+	r.resolveLocal(expr, expr.Keyword)
 	return nil, nil
 }
 

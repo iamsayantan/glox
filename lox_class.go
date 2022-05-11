@@ -47,5 +47,9 @@ func (lc *LoxClass) findMethod(name string) (LoxFunction, error) {
 		return method, nil
 	}
 
+	if lc.Superclass != nil {
+		return lc.Superclass.findMethod(name)
+	}
+
 	return LoxFunction{}, ErrMethodNotFound
 }
